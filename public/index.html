@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>S-DES Crypto-Mail</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2 class="title">Таємна пошта S-DES</h2>
+        <div class="mode-switch">
+            <button class="mode-btn active" id="btn-encrypt">Шифрування</button>
+            <button class="mode-btn" id="btn-decrypt">Дешифрування</button>
+        </div>
+        <form id="crypto-form">
+            <label for="message" id="label-message">Відкритий текст (8 біт):</label>
+            <input type="text" id="message" placeholder="11010000" required>
+            <label for="key" id="label-key">Секретний ключ (10 біт):</label>
+            <input type="text" id="key" placeholder="0011011101" required>
+            <label for="email">Email отримувача:</label>
+            <input type="email" id="email" placeholder="example@lpnu.ua" required>
+            <button type="submit" id="btn-submit">Зашифрувати та відправити</button>
+        </form>
+        <div id="quick-result" style="display: none; margin-top: 25px; padding: 20px; background: #e8f4fd; border-left: 5px solid #6c5ce7; border-radius: 4px;">
+            <h3 style="margin-top: 0; color: #6c5ce7;">Успішно оброблено!</h3>
+            <p style="font-size: 1.1em;">Двійковий результат: <strong id="res-bin" style="font-family: monospace; letter-spacing: 2px;"></strong></p>
+            <p style="font-size: 1.1em;">Десяткове значення: <strong id="res-dec"></strong></p>
+            <button id="btn-show-steps" style="margin-top: 15px; background: #00b894;">Показати детальні кроки</button>
+        </div>
+        <div id="visualizer">
+            <h3 class="visualizer-title">Детальний протокол роботи:</h3>
+            <div id="step-keys" class="step-block">
+                <span class="step-label">Генерація підключів:</span>
+                <div class="micro-steps" id="micro-keys"></div>
+                <span class="step-label">Результат:</span> <span class="step-value highlight" id="val-keys"></span>
+            </div>
+            <div id="step-1" class="step-block">
+                <span class="step-label">1. Початкова перестановка (IP):</span>
+                <div class="micro-steps" id="micro-ip"></div>
+                <span class="step-value" id="val-ip"></span>
+            </div>
+            <div id="step-2" class="step-block">
+                <span class="step-label">2. Раунд 1 (F_k):</span>
+                <div class="micro-steps" id="micro-fk1"></div>
+                <span class="step-label">Результат раунду 1:</span> <span class="step-value" id="val-fk1"></span>
+            </div>
+            <div id="step-3" class="step-block">
+                <span class="step-label">3. Перестановка підблоків (SW):</span>
+                <div class="micro-steps" id="micro-sw"></div>
+                <span class="step-value" id="val-sw"></span>
+            </div>
+            <div id="step-4" class="step-block">
+                <span class="step-label">4. Раунд 2 (F_k):</span>
+                <div class="micro-steps" id="micro-fk2"></div>
+                <span class="step-label">Результат раунду 2:</span> <span class="step-value" id="val-fk2"></span>
+            </div>
+            <div id="step-5" class="step-block">
+                <span class="step-label">5. Зворотна перестановка (IP⁻¹):</span>
+                <div class="micro-steps" id="micro-final"></div>
+                <span class="step-label">Фінальний результат:</span> <span class="step-value highlight" id="val-final"></span>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
