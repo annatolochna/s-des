@@ -2,65 +2,192 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>S-DES Crypto-Mail</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Crypto: DH + S-DES / AES</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="bg-grid"></div>
+
     <div class="container">
-        <h2 class="title">Таємна пошта S-DES</h2>
-        <div class="mode-switch">
-            <button class="mode-btn active" id="btn-encrypt">Шифрування</button>
-            <button class="mode-btn" id="btn-decrypt">Дешифрування</button>
+
+
+        <div class="card" id="algo-section">
+            <div class="card-step">00</div>
+            <h2 class="card-title">Алгоритм шифрування</h2>
+            <p class="card-desc">Оберіть алгоритм. Ключ буде автоматично виведено через KDF з секрету DH.</p>
+
+            <div class="algo-selector">
+                <label class="algo-card active" id="algo-sdes-card">
+                    <input type="radio" name="algorithm" value="sdes" checked>
+                    <div class="algo-icon">S</div>
+                    <div class="algo-info">
+                        <strong>S-DES</strong>
+                        <span>Навчальний · 8-бітний блок · 10-бітний ключ</span>
+                    </div>
+                    <div class="algo-check">✓</div>
+                </label>
+                <label class="algo-card" id="algo-aes-card">
+                    <input type="radio" name="algorithm" value="aes">
+                    <div class="algo-icon algo-icon--aes">A</div>
+                    <div class="algo-info">
+                        <strong>AES-128-CBC</strong>
+                        <span>Промисловий · довільний блок · 128-бітний ключ</span>
+                    </div>
+                    <div class="algo-check">✓</div>
+                </label>
+            </div>
+
+            <div id="algo-hint-sdes" class="algo-hint">
+                <span class="hint-tag sdes">S-DES</span>
+                Вхід: рівно <b>8 біт</b> (символи 0/1). Ключ: 10 біт, виведено з DH через SHA-256. Навчальний алгоритм — не для продакшену.
+            </div>
+            <div id="algo-hint-aes" class="algo-hint" style="display:none">
+                <span class="hint-tag aes">AES-128</span>
+                Вхід: довільний hex-рядок (парна кількість символів). Ключ: 128 біт (16 байт), виведено з DH через SHA-256. Режим CBC з випадковим IV.
+            </div>
         </div>
-        <form id="crypto-form">
-            <label for="message" id="label-message">Відкритий текст (8 біт):</label>
-            <input type="text" id="message" placeholder="11010000" required>
-            <label for="key" id="label-key">Секретний ключ (10 біт):</label>
-            <input type="text" id="key" placeholder="0011011101" required>
-            <label for="email">Email отримувача:</label>
-            <input type="email" id="email" placeholder="example@lpnu.ua" required>
-            <button type="submit" id="btn-submit">Зашифрувати та відправити</button>
-        </form>
-        <div id="quick-result" style="display: none; margin-top: 25px; padding: 20px; background: #e8f4fd; border-left: 5px solid #6c5ce7; border-radius: 4px;">
-            <h3 style="margin-top: 0; color: #6c5ce7;">Успішно оброблено!</h3>
-            <p style="font-size: 1.1em;">Двійковий результат: <strong id="res-bin" style="font-family: monospace; letter-spacing: 2px;"></strong></p>
-            <p style="font-size: 1.1em;">Десяткове значення: <strong id="res-dec"></strong></p>
-            <button id="btn-show-steps" style="margin-top: 15px; background: #00b894;">Показати детальні кроки</button>
+
+        <div class="card" id="dh-section">
+            <div class="card-step">01</div>
+            <h2 class="card-title">Обмін ключами <span class="tag">Діффі-Хеллман</span></h2>
+            <p class="card-desc">Аліса та сервер домовляються про спільний секрет через відкритий канал. Сервер щоразу генерує <b>випадковий</b> секрет b.</p>
+
+            <div class="input-grid">
+                <div class="field">
+                    <label>Просте число (p)</label>
+                    <input type="number" id="dh-p" value="331">
+                </div>
+                <div class="field">
+                    <label>Генератор (g)</label>
+                    <input type="number" id="dh-g" value="204">
+                </div>
+                <div class="field">
+                    <label>Секрет Аліси (a)</label>
+                    <input type="number" id="dh-a" value="46">
+                </div>
+            </div>
+
+            <button id="btn-dh" class="btn btn--primary">
+                <span class="btn-icon">⇌</span> Згенерувати спільний ключ
+            </button>
+
+            <div id="dh-result" class="result-panel" style="display:none">
+                <div class="result-row">
+                    <span class="result-label">Публічний ключ Аліси (A)</span>
+                    <code id="res-A"></code>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Відповідь сервера (B)</span>
+                    <code id="res-B"></code>
+                </div>
+                <div class="result-row result-row--highlight">
+                    <span class="result-label">Спільний секрет K (Аліса)</span>
+                    <code id="res-K"></code>
+                </div>
+                <div class="result-row result-row--key">
+                    <span class="result-label">Похідний ключ <span id="key-bits-label">(10 біт, KDF)</span></span>
+                    <code id="res-derived-key" class="key-code"></code>
+                </div>
+                <div class="security-note">
+                    <span>🔒</span>
+                    <span>Сервер зберігає ключ у сесії. Клієнт обчислив K самостійно та застосував той самий KDF. Сирий секрет K не передавався.</span>
+                </div>
+            </div>
         </div>
-        <div id="visualizer">
-            <h3 class="visualizer-title">Детальний протокол роботи:</h3>
-            <div id="step-keys" class="step-block">
-                <span class="step-label">Генерація підключів:</span>
-                <div class="micro-steps" id="micro-keys"></div>
-                <span class="step-label">Результат:</span> <span class="step-value highlight" id="val-keys"></span>
+
+        <div class="card disabled" id="sdes-section">
+            <div class="card-step">02</div>
+            <h2 class="card-title">Захищена передача <span class="tag" id="algo-tag-label">S-DES</span></h2>
+
+            <div class="mode-switch">
+                <button type="button" class="mode-btn active" id="btn-encrypt">🔒 Шифрування</button>
+                <button type="button" class="mode-btn" id="btn-decrypt">🔓 Дешифрування</button>
             </div>
-            <div id="step-1" class="step-block">
-                <span class="step-label">1. Початкова перестановка (IP):</span>
-                <div class="micro-steps" id="micro-ip"></div>
-                <span class="step-value" id="val-ip"></span>
+
+            <form id="crypto-form">
+                <div class="field">
+                    <label id="label-message">Відкритий текст <span id="label-hint" class="field-hint">(8 біт: символи 0 та 1)</span></label>
+                    <input type="text" id="message" placeholder="11010000">
+                </div>
+
+                <div class="field">
+                    <label>Похідний ключ <span class="field-hint">(згенеровано DH + KDF)</span></label>
+                    <input type="text" id="key" readonly class="locked-input">
+                </div>
+
+                <div class="field">
+                    <label>Email отримувача</label>
+                    <input type="email" id="email" placeholder="example@lpnu.ua">
+                </div>
+
+                <button type="submit" id="btn-submit" class="btn btn--primary">
+                    <span class="btn-icon">✉</span>
+                    <span id="btn-submit-label">Зашифрувати та відправити</span>
+                </button>
+            </form>
+
+            <div id="quick-result" class="result-panel success-panel" style="display:none">
+                <div class="success-header">
+                    <span class="success-icon">✓</span>
+                    <span>Успішно відправлено!</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Результат</span>
+                    <code id="res-output" class="key-code"></code>
+                </div>
+                <div class="result-row" id="res-dec-row">
+                    <span class="result-label">Десяткове значення</span>
+                    <code id="res-dec"></code>
+                </div>
+                <button id="btn-show-steps" class="btn btn--secondary">Показати детальні кроки</button>
             </div>
-            <div id="step-2" class="step-block">
-                <span class="step-label">2. Раунд 1 (F_k):</span>
-                <div class="micro-steps" id="micro-fk1"></div>
-                <span class="step-label">Результат раунду 1:</span> <span class="step-value" id="val-fk1"></span>
+
+            
+            <div id="sdes-visualizer" style="display:none">
+                <h4 class="vis-title">Покроковий протокол S-DES</h4>
+                <div id="step-keys" class="step-block">
+                    <span class="step-label">Генерація підключів</span>
+                    <div class="micro-steps" id="micro-keys"></div>
+                    <span class="step-value highlight" id="val-keys"></span>
+                </div>
+                <div id="step-1" class="step-block">
+                    <span class="step-label">1. IP (початкова перестановка)</span>
+                    <div class="micro-steps" id="micro-ip"></div>
+                    <span class="step-value" id="val-ip"></span>
+                </div>
+                <div id="step-2" class="step-block">
+                    <span class="step-label">2. Раунд 1 (fK)</span>
+                    <div class="micro-steps" id="micro-fk1"></div>
+                    <span class="step-value" id="val-fk1"></span>
+                </div>
+                <div id="step-3" class="step-block">
+                    <span class="step-label">3. SW (перестановка половин)</span>
+                    <div class="micro-steps" id="micro-sw"></div>
+                    <span class="step-value" id="val-sw"></span>
+                </div>
+                <div id="step-4" class="step-block">
+                    <span class="step-label">4. Раунд 2 (fK)</span>
+                    <div class="micro-steps" id="micro-fk2"></div>
+                    <span class="step-value" id="val-fk2"></span>
+                </div>
+                <div id="step-5" class="step-block">
+                    <span class="step-label">5. IP⁻¹ (зворотна перестановка)</span>
+                    <div class="micro-steps" id="micro-final"></div>
+                    <span class="step-value highlight" id="val-final"></span>
+                </div>
             </div>
-            <div id="step-3" class="step-block">
-                <span class="step-label">3. Перестановка підблоків (SW):</span>
-                <div class="micro-steps" id="micro-sw"></div>
-                <span class="step-value" id="val-sw"></span>
-            </div>
-            <div id="step-4" class="step-block">
-                <span class="step-label">4. Раунд 2 (F_k):</span>
-                <div class="micro-steps" id="micro-fk2"></div>
-                <span class="step-label">Результат раунду 2:</span> <span class="step-value" id="val-fk2"></span>
-            </div>
-            <div id="step-5" class="step-block">
-                <span class="step-label">5. Зворотна перестановка (IP⁻¹):</span>
-                <div class="micro-steps" id="micro-final"></div>
-                <span class="step-label">Фінальний результат:</span> <span class="step-value highlight" id="val-final"></span>
+
+            
+            <div id="aes-visualizer" style="display:none">
+                <h4 class="vis-title">Кроки AES-128-CBC</h4>
+                <div id="aes-steps-container"></div>
             </div>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
